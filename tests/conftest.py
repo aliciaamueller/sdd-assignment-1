@@ -1,21 +1,17 @@
 import sqlite3
-
 import pytest
-
 import db
 
 
 @pytest.fixture
 def test_db(tmp_path, monkeypatch):
-    """Give each test its own empty database with the five tables created."""
-    # Use a temporary database so we don't change real data.
+    """Create a temporary database for each test."""
+
     db_path = tmp_path / "test.db"
+
     monkeypatch.setattr(db, "DB_PATH", str(db_path))
+    monkeypatch.setattr(db, "DATA_DIR", str(tmp_path))
 
-    with open(db.SCHEMA_PATH) as file:
-        schema = file.read()
+    db.init_db()
 
-    conn = sqlite3.connect(db_path)
-    conn.executescript(schema)
-    yield conn
-    conn.close()
+    return db_path
