@@ -1,34 +1,41 @@
-
-import sqlite3
+import pytest
 
 from trip_statistics import get_trip_statistics
 
 
-def test_empty_trip_statistics(tmp_path, monkeypatch):
-    # Use a temporary database so we don't change real data.
-    db_path = tmp_path / "test.db"
-
-    import db
-    monkeypatch.setattr(db, "DB_PATH", str(db_path))
-
-    # Create the five tables in the temporary database.
-    with open(db.SCHEMA_PATH) as file:
-        schema = file.read()
-
-    conn = sqlite3.connect(db_path)
-    conn.executescript(schema)
-
-    # Create a trip with 100 available places.
+def add_trip(conn, capacity):
     conn.execute(
         """
         INSERT INTO trips
-        (name, destination, start_date, end_date, capacity)
-        VALUES (?, ?, ?, ?, ?)
+        (id, name, destination, start_date, end_date, capacity)
+        VALUES (1, 'Andorra', 'Andorra', '2027-01-20', '2027-01-24', ?)
         """,
-        ("Andorra", "Andorra", "2027-01-20", "2027-01-24", 100)
+        (capacity,)
     )
-    conn.commit()
-    conn.close()
+
+
+def add_student(conn, registration_id, name, status):
+    conn.execute(
+        """
+        INSERT INTO registrations
+        (id, trip_id, name, email, status, registered_at)
+        VALUES (?, 1, ?, ?, ?, '2026-10-11T15:00:00')
+        """,
+        (registration_id, name, f"{name.lower()}@example.com", status)
+    )
+
+
+def assign_room(conn, registration_id):
+    conn.execute(
+        "INSERT INTO room_assignments (room_id, registration_id) VALUES (1, ?)",
+        (registration_id,)
+    )
+
+
+def test_empty_trip_statistics(test_db):
+    # Create a trip with 100 available places.
+    add_trip(test_db, 100)
+    test_db.commit()
 
     # Check that an empty trip shows the correct numbers.
     result = get_trip_statistics(1)
@@ -42,59 +49,23 @@ def test_empty_trip_statistics(tmp_path, monkeypatch):
     assert result["occupancy_percent"] == 0.0
 
 
-
-def test_trip_statistics_with_students(tmp_path, monkeypatch):
-    db_path = tmp_path / "test.db"
-
-    import db
-    monkeypatch.setattr(db, "DB_PATH", str(db_path))
-
-    with open(db.SCHEMA_PATH) as file:
-        schema = file.read()
-
-    conn = sqlite3.connect(db_path)
-    conn.executescript(schema)
-
+def test_trip_statistics_with_students(test_db):
     # Create a trip with 5 places.
-    conn.execute(
-        """
-        INSERT INTO trips
-        (id, name, destination, start_date, end_date, capacity)
-        VALUES (1, 'Andorra', 'Andorra', '2027-01-20', '2027-01-24', 5)
-        """
-    )
+    add_trip(test_db, 5)
 
     # Register three confirmed students and one waitlisted student.
-    students = [
-        (1, 1, "Sofia", "sofia@example.com", "confirmed"),
-        (2, 1, "Emma", "emma@example.com", "confirmed"),
-        (3, 1, "Lucas", "lucas@example.com", "confirmed"),
-        (4, 1, "Daniel", "daniel@example.com", "waitlisted"),
-    ]
-
-    for student in students:
-        conn.execute(
-            """
-            INSERT INTO registrations
-            (id, trip_id, name, email, status, registered_at)
-            VALUES (?, ?, ?, ?, ?, '2026-10-11T15:00:00')
-            """,
-            student
-        )
+    add_student(test_db, 1, "Sofia", "confirmed")
+    add_student(test_db, 2, "Emma", "confirmed")
+    add_student(test_db, 3, "Lucas", "confirmed")
+    add_student(test_db, 4, "Daniel", "waitlisted")
 
     # Create a room and assign Sofia and Emma.
-    conn.execute(
+    test_db.execute(
         "INSERT INTO rooms (id, trip_id, name, capacity) VALUES (1, 1, 'Room A', 4)"
     )
-    conn.execute(
-        "INSERT INTO room_assignments (room_id, registration_id) VALUES (1, 1)"
-    )
-    conn.execute(
-        "INSERT INTO room_assignments (room_id, registration_id) VALUES (1, 2)"
-    )
-
-    conn.commit()
-    conn.close()
+    assign_room(test_db, 1)
+    assign_room(test_db, 2)
+    test_db.commit()
 
     result = get_trip_statistics(1)
 
@@ -106,3 +77,30 @@ def test_trip_statistics_with_students(tmp_path, monkeypatch):
     assert result["need_room"] == 1
     assert result["occupancy_percent"] == 60.0
 
+
+def test_cancelled_and_waitlisted_students_with_rooms_are_not_counted(test_db):
+    add_trip(test_db, 5)
+    add_student(test_db, 1, "Sofia", "confirmed")
+    add_student(test_db, 2, "Emma", "cancelled")
+    add_student(test_db, 3, "Daniel", "waitlisted")
+
+    # All three have a room, but only Sofia is confirmed.
+    test_db.execute(
+        "INSERT INTO rooms (id, trip_id, name, capacity) VALUES (1, 1, 'Room A', 4)"
+    )
+    assign_room(test_db, 1)
+    assign_room(test_db, 2)
+    assign_room(test_db, 3)
+    test_db.commit()
+
+    result = get_trip_statistics(1)
+
+    assert result["confirmed"] == 1
+    assert result["waitlisted"] == 1
+    assert result["room_assigned"] == 1
+    assert result["need_room"] == 0
+
+
+def test_unknown_trip_raises_error(test_db):
+    with pytest.raises(ValueError, match="Trip not found"):
+        get_trip_statistics(999)

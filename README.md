@@ -83,7 +83,9 @@ sdd-assignment-1/
 ├── schema.sql
 ├── trip_statistics.py
 ├── requirements.txt
+├── pytest.ini
 ├── tests/
+│   ├── conftest.py
 │   └── test_trip_statistics.py
 ├── container/
 │   ├── Dockerfile
@@ -102,7 +104,8 @@ sdd-assignment-1/
 - `db.py`: Opens SQLite connections and initializes the database.
 - `schema.sql`: Defines the database tables, constraints and indexes.
 - `trip_statistics.py`: Calculates the statistics used by the future dashboard.
-- `tests/`: Contains automated tests.
+- `pytest.ini`: Lets plain `pytest` find the project modules and the `tests/` folder.
+- `tests/`: Contains automated tests. `conftest.py` provides the shared `test_db` fixture (a temporary database with the schema loaded).
 - `container/`: Contains the professor-provided Docker template and contract checker.
 - `ADR.md`: Records architectural decisions.
 - `AI_USAGE.md`: Documents how AI tools were used during development.
@@ -171,22 +174,42 @@ The SQLite database is initialized automatically using `schema.sql`. Existing ta
 
 The project uses pytest for automated tests.
 
+`pytest.ini` puts the project root on the import path and points pytest at `tests/`, so plain `pytest` works from the repo root.
+
 Run all tests:
 
 ```bash
-python -m pytest -v
+pytest -v
 ```
 
-Run tests with coverage:
+Run tests with coverage. Coverage is measured on the business-logic modules only, so test files and framework glue (`app.py`, `config.py`, `db.py`) do not inflate the number:
 
 ```bash
-python -m pytest --cov=. --cov-report=term-missing
+pytest --cov=trip_statistics --cov-report=term-missing
+```
+
+Once the `trips/` and `rooms/` packages exist, the command becomes:
+
+```bash
+pytest --cov=trips --cov=rooms --cov=trip_statistics --cov-report=term-missing
+```
+
+Current result (4 tests):
+
+```text
+Name                 Stmts   Miss  Cover   Missing
+--------------------------------------------------
+trip_statistics.py      13      0   100%
+--------------------------------------------------
+TOTAL                   13      0   100%
 ```
 
 The current dashboard tests check that:
 
 - A trip with no registrations produces the expected statistics.
 - Confirmed registrations, waiting lists and room assignments are counted correctly.
+- Cancelled or waitlisted students who still have a room are not counted as assigned.
+- Asking for an unknown trip raises `ValueError`.
 
 The tests use temporary SQLite databases to avoid modifying application data.
 
