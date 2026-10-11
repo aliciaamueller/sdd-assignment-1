@@ -1,11 +1,14 @@
-import sqlite3
+
+"""Shared database setup for tests."""
+
 import pytest
+
 import db
 
 
 @pytest.fixture
 def test_db(tmp_path, monkeypatch):
-    """Create a temporary database for each test."""
+    """Provide a fresh SQLite connection for each test."""
 
     db_path = tmp_path / "test.db"
 
@@ -14,4 +17,9 @@ def test_db(tmp_path, monkeypatch):
 
     db.init_db()
 
-    return db_path
+    conn = db.get_connection()
+
+    try:
+        yield conn
+    finally:
+        conn.close()

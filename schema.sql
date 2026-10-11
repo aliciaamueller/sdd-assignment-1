@@ -16,21 +16,29 @@ CREATE TABLE IF NOT EXISTS trips (
     capacity    INTEGER NOT NULL CHECK (capacity > 0)
 );
 
+
 CREATE TABLE IF NOT EXISTS registrations (
-    id            INTEGER PRIMARY KEY,
-    trip_id       INTEGER NOT NULL REFERENCES trips(id),
-    name          TEXT    NOT NULL,
-    email         TEXT    NOT NULL COLLATE NOCASE,  -- Ana@x.com equals ana@x.com
-    status        TEXT    NOT NULL
-                  CHECK (status IN ('confirmed', 'waitlisted', 'cancelled')),
-    registered_at TEXT    NOT NULL  -- ISO timestamp, decides waitlist order
+    id INTEGER PRIMARY KEY,
+    trip_id INTEGER NOT NULL REFERENCES trips(id),
+    name TEXT NOT NULL,
+    email TEXT NOT NULL COLLATE NOCASE,
+    status TEXT NOT NULL
+        CHECK (status IN (
+            'pending_payment',
+            'confirmed',
+            'waitlisted',
+            'cancelled'
+        )),
+    registered_at TEXT NOT NULL,
+    payment_deadline TEXT
 );
+
 
 -- One active registration per email per trip.
 -- Cancelled rows are left out, so a cancelled person can register again.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_registrations_active_email
     ON registrations (trip_id, email)
-    WHERE status IN ('confirmed', 'waitlisted');
+    WHERE status IN ('pending_payment', 'confirmed', 'waitlisted');
 
 -- =====================================================================
 -- SEAM: everything below belongs to Room Allocation.
