@@ -42,6 +42,7 @@ def test_empty_trip_statistics(test_db):
 
     assert result["capacity"] == 100
     assert result["confirmed"] == 0
+    assert result["pending_payment"] == 0
     assert result["waitlisted"] == 0
     assert result["places_remaining"] == 100
     assert result["room_assigned"] == 0
@@ -99,6 +100,24 @@ def test_cancelled_and_waitlisted_students_with_rooms_are_not_counted(test_db):
     assert result["waitlisted"] == 1
     assert result["room_assigned"] == 1
     assert result["need_room"] == 0
+
+
+def test_unpaid_reservations_still_take_places(test_db):
+    add_trip(test_db, 4)
+    add_student(test_db, 1, "Sofia", "confirmed")
+    add_student(test_db, 2, "Emma", "pending_payment")
+    add_student(test_db, 3, "Lucas", "pending_payment")
+    test_db.commit()
+
+    result = get_trip_statistics(1)
+
+    assert result["confirmed"] == 1
+    assert result["pending_payment"] == 2
+    # Only one place is left, because unpaid reservations hold theirs.
+    assert result["places_remaining"] == 1
+    assert result["occupancy_percent"] == 75.0
+    # Only paid students need a room yet.
+    assert result["need_room"] == 1
 
 
 def test_unknown_trip_raises_error(test_db):
