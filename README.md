@@ -23,12 +23,14 @@ The aim is to keep the application simple enough to run as a single service whil
 - SQLite database with five tables: trips, registrations, rooms, room assignments and roommate preferences.
 - Database constraints to prevent duplicate active registrations and invalid capacity values.
 - Preservation of cancelled registration records, allowing students to register again.
+- Trip creation with validation of name, destination, dates and capacity.
 - Dashboard statistics for trip capacity, confirmed students, waiting lists, remaining places and room allocation.
-- Automated pytest tests for dashboard statistics.
+- Automated pytest tests for trip creation and dashboard statistics.
+- Root `Dockerfile` (the provided template with its TODOs filled in), passing the `container/run.sh` contract check.
 
 ### Planned functionality
 
-- Create and manage ski trips.
+- Edit and list ski trips.
 - Register students and automatically place them on waiting lists when trips reach capacity.
 - Cancel registrations and promote the next waitlisted student.
 - Create rooms and manually assign confirmed students.
@@ -48,7 +50,7 @@ An additional feature being considered is automatic roommate matching based on s
 | HTML | Web interface (planned) |
 | pytest | Automated testing |
 | pytest-cov | Test coverage measurement |
-| Docker | Containerized deployment (planned) |
+| Docker | Single-container deployment |
 
 The application uses Python's built-in `sqlite3` module rather than an external ORM.
 
@@ -81,11 +83,13 @@ sdd-assignment-1/
 ├── config.py
 ├── db.py
 ├── schema.sql
+├── trip_management.py
 ├── trip_statistics.py
 ├── requirements.txt
 ├── pytest.ini
 ├── tests/
 │   ├── conftest.py
+│   ├── test_trip_management.py
 │   └── test_trip_statistics.py
 ├── container/
 │   ├── Dockerfile
@@ -103,14 +107,14 @@ sdd-assignment-1/
 - `config.py`: Reads environment variables for the server port and database directory.
 - `db.py`: Opens SQLite connections and initializes the database.
 - `schema.sql`: Defines the database tables, constraints and indexes.
+- `trip_management.py`: Creates ski trips after validating their details.
 - `trip_statistics.py`: Calculates the statistics used by the future dashboard.
 - `pytest.ini`: Lets plain `pytest` find the project modules and the `tests/` folder.
 - `tests/`: Contains automated tests. `conftest.py` provides the shared `test_db` fixture (a temporary database with the schema loaded).
+- `Dockerfile`: The provided template copied to the root, with its four TODOs filled in.
 - `container/`: Contains the professor-provided Docker template and contract checker.
 - `ADR.md`: Records architectural decisions.
 - `AI_USAGE.md`: Documents how AI tools were used during development.
-
-Some files listed above are planned deliverables and may not exist until later development stages.
 
 ## 6. Running the Application Locally
 
@@ -185,26 +189,28 @@ pytest -v
 Run tests with coverage. Coverage is measured on the business-logic modules only, so test files and framework glue (`app.py`, `config.py`, `db.py`) do not inflate the number:
 
 ```bash
-pytest --cov=trip_statistics --cov-report=term-missing
+pytest --cov=trip_management --cov=trip_statistics --cov-report=term-missing
 ```
 
-Once the `trips/` and `rooms/` packages exist, the command becomes:
+Add each new logic module (for example a room allocation module) to this command as it is created.
 
-```bash
-pytest --cov=trips --cov=rooms --cov=trip_statistics --cov-report=term-missing
-```
-
-Current result (4 tests):
+Current result (8 tests):
 
 ```text
 Name                 Stmts   Miss  Cover   Missing
 --------------------------------------------------
+trip_management.py      22      3    86%   17, 23-24
 trip_statistics.py      13      0   100%
 --------------------------------------------------
-TOTAL                   13      0   100%
+TOTAL                   35      3    91%
 ```
 
-The current dashboard tests check that:
+The trip creation tests check that:
+
+- A valid trip is saved and its ID is returned.
+- An invalid capacity, an empty name and invalid dates are rejected with `ValueError`.
+
+The dashboard tests check that:
 
 - A trip with no registrations produces the expected statistics.
 - Confirmed registrations, waiting lists and room assignments are counted correctly.
@@ -219,15 +225,50 @@ The assignment requires a single Docker container, configurable through `PORT` a
 
 The professor-provided Dockerfile template is available in `container/Dockerfile`, together with the contract checker `container/run.sh`.
 
-The root Dockerfile and final container verification are still part of the development work.
+The root `Dockerfile` is that template with only its four `TODO` lines filled in: the `python:3.12-slim` base image, installing from `requirements.txt`, copying the application files (tests are left out), and starting the app with `python app.py`.
 
-Once the container configuration is complete, the required check will be run with:
+Build and run it:
+
+```bash
+docker build -t ski-club .
+docker run -p 8000:8000 -v ski-club-data:/data ski-club
+```
+
+Run the contract check:
 
 ```bash
 ./container/run.sh .
 ```
 
-The final verification results will be documented here before submission.
+Result:
+
+```text
+=== SDD Assignment 1 contract check ===
+
+==> Repository shape
+  PASS  one Dockerfile, one manifest (requirements.txt)
+
+==> Build from a clean context, no build args
+  PASS  image built
+  PASS  image size 53 MB
+
+==> Start on PORT=8000 and reach it from the host
+  PASS  HTTP 200 from http://localhost:8000/
+
+==> SQLite file under DATA_DIR
+  PASS  found in /data: ski_club.db
+
+==> Data persists, and a second boot does not re-seed
+  PASS  volume at /data persists
+  PASS  row counts unchanged across restart: registrations=0 room_assignments=0 roommate_preferences=0 rooms=0 trips=0
+
+==> PORT override is honoured (not hardcoded)
+  PASS  HTTP 200 from http://localhost:9123/
+
+=== ALL CHECKS PASSED ===
+```
+
+This will be re-run before submission as more features are added.
 
 ## 10. Development and Documentation
 
@@ -241,8 +282,8 @@ The repository also includes:
 
 ## 11. Current Status
 
-The database structure, Flask skeleton and dashboard calculation logic have been implemented.
+The database structure, Flask skeleton, trip creation, dashboard calculation logic and the container setup have been implemented.
 
-The next development stages are Trip Management, Room Allocation, cross-domain cancellation handling, the web interface, Docker verification and final testing.
+The next development stages are the rest of Trip Management (registration, waitlist and cancellation), Room Allocation, cross-domain cancellation handling, the web interface and final testing.
 
 The application is still under development and is not yet the final submission version.
