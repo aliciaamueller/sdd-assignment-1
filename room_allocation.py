@@ -1,9 +1,16 @@
 
-"""Room Allocation domain: rooms, assignments and roommate preferences."""
+"""Room Allocation domain: rooms, assignments and roommate preferences.
+
+Facade: create_room, assign_student, remove_assignment,
+add_roommate_preference, get_rooms and check_room_on_trip are this
+domain's public interface, and would be the endpoints of the Room
+Allocation service in Assignment 2.
+"""
 
 import sqlite3
 
 from db import get_connection
+from trip_management import on_registration_cancelled
 
 
 def create_room(trip_id, name, capacity):
@@ -203,3 +210,15 @@ def check_room_on_trip(trip_id, room_id):
             raise ValueError("Room not found on this trip")
     finally:
         conn.close()
+
+
+def _release_room_on_cancel(conn, registration_id):
+    """Observer: free a cancelled student's bed, inside the caller's transaction."""
+    conn.execute(
+        "DELETE FROM room_assignments WHERE registration_id = ?",
+        (registration_id,)
+    )
+
+
+# Subscribe once, when this module is first imported.
+on_registration_cancelled(_release_room_on_cancel)

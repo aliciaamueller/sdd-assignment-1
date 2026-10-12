@@ -1,4 +1,11 @@
-"""Functions for managing ski trips."""
+"""Trip Management domain: trips, registrations, payments and the waitlist.
+
+Facade: the public functions below (create_trip, register_student,
+confirm_payment, cancel_registration, check_registration_on_trip) are the
+only way the rest of the app changes this domain. Callers never see the
+SQL, the transactions or the expiry rules. In Assignment 2 these become the
+endpoints of the Trip Management service.
+"""
 import sqlite3
 from datetime import date, datetime, timedelta, timezone
 
@@ -6,6 +13,22 @@ from db import get_connection
 
 # How long a student has to pay before their reserved place is released.
 PAYMENT_WINDOW = timedelta(hours=48)
+
+# Observer: functions from other domains that want to know when a
+# registration is cancelled. Trip Management calls them without knowing what
+# they do, so it never touches another domain's tables. Room Allocation
+# subscribes to free the student's bed.
+_cancellation_listeners = []
+
+
+def on_registration_cancelled(listener):
+    """Subscribe listener(conn, registration_id) to cancellations.
+
+    The listener runs inside the cancellation's transaction, so if it fails
+    the whole cancellation is rolled back.
+    """
+    if listener not in _cancellation_listeners:
+        _cancellation_listeners.append(listener)
 
 
 def _now():
@@ -261,7 +284,7 @@ def confirm_payment(registration_id):
 
 
 def cancel_registration(registration_id):
-    """Cancel a registration, free its room and update the waiting list."""
+    """Cancel a registration, notify listeners and update the waiting list."""
 
     conn = get_connection()
 
@@ -285,11 +308,9 @@ def cancel_registration(registration_id):
             (registration_id,)
         )
 
-        # Free the student's bed if they were assigned to a room.
-        conn.execute(
-            "DELETE FROM room_assignments WHERE registration_id = ?",
-            (registration_id,)
-        )
+        # Tell the other domains (Room Allocation frees the bed).
+        for listener in _cancellation_listeners:
+            listener(conn, registration_id)
 
         # Release expired reservations and offer available places
         # to students on the waiting list, in FIFO order.

@@ -10,7 +10,11 @@ SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.s
 
 
 def get_connection():
-    """Open a connection to the database with foreign keys enforced."""
+    """Open a connection to the database with foreign keys enforced.
+
+    Simple factory: every module gets its connection here, so every
+    connection is set up the same way (named columns, foreign keys on).
+    """
     conn = sqlite3.connect(DB_PATH)
     # Let rows be read by column name, e.g. row["name"].
     conn.row_factory = sqlite3.Row

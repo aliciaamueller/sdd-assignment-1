@@ -379,3 +379,43 @@ def test_simultaneous_registrations_never_exceed_capacity(test_db):
     # Exactly two places are taken and everyone else is waiting.
     assert holding_a_place == 2
     assert waitlisted == 8
+
+
+def test_cancellation_notifies_listeners(test_db, monkeypatch):
+    # Replace the listener list so this test does not affect the others.
+    monkeypatch.setattr(trip_management, "_cancellation_listeners", [])
+    notified = []
+    trip_management.on_registration_cancelled(
+        lambda conn, registration_id: notified.append(registration_id)
+    )
+
+    trip_id = create_trip("Andorra 2027", "Grandvalira",
+                          "2027-01-20", "2027-01-24", 10)
+    registration_id = register_student(trip_id, "Ana", "ana@ie.edu")
+    cancel_registration(registration_id)
+
+    assert notified == [registration_id]
+
+
+def test_failing_listener_rolls_back_cancellation(test_db, monkeypatch):
+    monkeypatch.setattr(trip_management, "_cancellation_listeners", [])
+
+    def broken_listener(conn, registration_id):
+        raise RuntimeError("listener failed")
+
+    trip_management.on_registration_cancelled(broken_listener)
+
+    trip_id = create_trip("Andorra 2027", "Grandvalira",
+                          "2027-01-20", "2027-01-24", 10)
+    registration_id = register_student(trip_id, "Ana", "ana@ie.edu")
+
+    with pytest.raises(RuntimeError):
+        cancel_registration(registration_id)
+
+    # The cancellation and the listener share one transaction,
+    # so the registration is still active.
+    status = test_db.execute(
+        "SELECT status FROM registrations WHERE id = ?",
+        (registration_id,)
+    ).fetchone()["status"]
+    assert status == "pending_payment"
