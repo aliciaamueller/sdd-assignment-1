@@ -161,16 +161,16 @@ Coverage is measured on the three business-logic modules, rather than including 
 
 ### Recorded test results
 
-**59 tests | 100% business-logic coverage** (run on 2026-10-12)
+**61 tests | 100% business-logic coverage** (run on 2026-10-12)
 
 ```text
 Name                 Stmts   Miss  Cover   Missing
 --------------------------------------------------
-room_allocation.py      96      0   100%
-trip_management.py     112      0   100%
+room_allocation.py     100      0   100%
+trip_management.py     117      0   100%
 trip_statistics.py      15      0   100%
 --------------------------------------------------
-TOTAL                  223      0   100%
+TOTAL                  232      0   100%
 ```
 
 100% is line coverage, not proof that every combination of rules is tested; the testing priorities are explained in ADR 4.
@@ -238,6 +238,8 @@ A few decisions were particularly important during development.
 **Handling simultaneous requests safely.** Database transactions protect capacity checks and registration updates, rather than assuming that registrations will always happen one at a time.
 
 **Keeping responsibilities separate.** Trip Management and Room Allocation share one database but have distinct tables and business rules. One deliberate cross-domain query remains in the dashboard statistics, as documented in the architecture decisions.
+
+**Design patterns where they earn their place.** Each domain module acts as a **Facade**: its public functions are the only way the rest of the app changes that domain, and they become the service endpoints in Assignment 2. Cancelling a registration uses an **Observer**: Room Allocation subscribes with `on_registration_cancelled`, so Trip Management never writes to room tables. `get_connection` is a **simple factory** for identically configured connections, and `handle_action` in `app.py` runs each route's action **Command-style** with shared error handling. Heavier patterns (Builder, Strategy, Adapter) were left out because nothing in the current app needs them.
 
 **Avoiding unnecessary infrastructure.** The application uses one process and one container. Payment expiry is checked during relevant operations rather than introducing background jobs or additional services.
 
