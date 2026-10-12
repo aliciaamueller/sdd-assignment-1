@@ -16,7 +16,10 @@
 <section class="section">
     <div class="section-heading">
         <h2>Your trips</h2>
-        <span class="muted">{{ trips|length }} trips</span>
+        <span class="muted">
+            {{ trips|length }}
+            {{ "trip" if trips|length == 1 else "trips" }}
+        </span>
     </div>
 
     <div class="trip-grid">
@@ -31,7 +34,7 @@
             <h3>{{ trip.name }}</h3>
             <p class="muted">{{ trip.destination }}</p>
             <p class="trip-dates">
-                {{ trip.start_date }} — {{ trip.end_date }}
+                {{ trip.dates }}
             </p>
 
             <div class="progress-track">

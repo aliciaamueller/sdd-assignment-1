@@ -12,34 +12,33 @@
         <p class="eyebrow">TRIP MANAGEMENT</p>
         <h1>{{ trip.name }}</h1>
         <p class="subtitle">
-            {{ trip.destination }} ·
-            {{ trip.start_date }} — {{ trip.end_date }}
+            {{ trip.destination }} · {{ trip.dates }}
         </p>
     </div>
 </section>
 
-<section class="stats-grid">
-    <div class="stat-card">
-        <span>Confirmed</span>
-        <strong>{{ stats.confirmed }}</strong>
-    </div>
-    <div class="stat-card">
-        <span>Pending payment</span>
-        <strong>{{ stats.pending_payment }}</strong>
-    </div>
-    <div class="stat-card">
-        <span>Waiting list</span>
-        <strong>{{ stats.waitlisted }}</strong>
-    </div>
-    <div class="stat-card">
+<section class="stats-strip">
+    <div class="stat highlight">
         <span>Places remaining</span>
         <strong>{{ stats.places_remaining }}</strong>
     </div>
-    <div class="stat-card">
+    <div class="stat">
+        <span>Confirmed</span>
+        <strong>{{ stats.confirmed }}</strong>
+    </div>
+    <div class="stat">
+        <span>Pending payment</span>
+        <strong>{{ stats.pending_payment }}</strong>
+    </div>
+    <div class="stat">
+        <span>Waiting list</span>
+        <strong>{{ stats.waitlisted }}</strong>
+    </div>
+    <div class="stat">
         <span>Room assigned</span>
         <strong>{{ stats.room_assigned }}</strong>
     </div>
-    <div class="stat-card">
+    <div class="stat">
         <span>Need a room</span>
         <strong>{{ stats.need_room }}</strong>
     </div>
@@ -47,41 +46,11 @@
 
 <section class="section">
     <div class="section-heading">
-        <h2>Register a student</h2>
-    </div>
-
-    <div class="panel">
-        <p class="muted">
-            Available places are reserved for 48 hours pending payment.
-            When the trip is full, new students join the FIFO waiting list.
-        </p>
-
-        <form method="POST"
-              action="{{ url_for('register_route', trip_id=trip.id) }}"
-              class="form-grid">
-
-            <label>
-                Student name
-                <input name="name" placeholder="Sofia García" required>
-            </label>
-
-            <label>
-                Email address
-                <input type="email" name="email"
-                       placeholder="sofia@example.com" required>
-            </label>
-
-            <div class="form-action">
-                <button type="submit">Register student →</button>
-            </div>
-        </form>
-    </div>
-</section>
-
-<section class="section">
-    <div class="section-heading">
         <h2>Registrations</h2>
-        <span class="muted">{{ registrations|length }} records</span>
+        <span class="muted">
+            {{ registrations|length }}
+            {{ "record" if registrations|length == 1 else "records" }}
+        </span>
     </div>
 
     <div class="table-wrap">
@@ -98,15 +67,15 @@
             <tbody>
                 {% for student in registrations %}
                 <tr>
-                    <td><strong>{{ student.name }}</strong></td>
-                    <td>{{ student.email }}</td>
-                    <td>
+                    <td data-label="Student"><strong>{{ student.name }}</strong></td>
+                    <td data-label="Email">{{ student.email }}</td>
+                    <td data-label="Status">
                         <span class="status {{ student.status }}">
                             {{ student.status.replace('_', ' ') }}
                         </span>
                     </td>
-                    <td>{{ student.room_name or "—" }}</td>
-                    <td>
+                    <td data-label="Room">{{ student.room_name or "—" }}</td>
+                    <td data-label="Actions">
                         <div class="actions">
                             {% if student.status == "pending_payment" %}
                             <form method="POST"
@@ -144,13 +113,45 @@
             </tbody>
         </table>
     </div>
+
+    <div class="panel register-panel">
+        <h3>Register a student</h3>
+        <p class="muted">
+            Available places are reserved for 48 hours pending payment.
+            When the trip is full, new students join the FIFO waiting list.
+        </p>
+
+        <form method="POST"
+              action="{{ url_for('register_route', trip_id=trip.id) }}"
+              class="form-grid">
+
+            <label>
+                Student name
+                <input name="name" placeholder="Sofia García" required>
+            </label>
+
+            <label>
+                Email address
+                <input type="email" name="email"
+                       placeholder="sofia@example.com" required>
+            </label>
+
+            <div class="form-action">
+                <button type="submit">Register student →</button>
+            </div>
+        </form>
+    </div>
 </section>
 
 <section class="section">
     <div class="section-heading">
         <h2>Room Allocation</h2>
         <span class="muted">
-            {{ stats.need_room }} confirmed students need a room
+            {% if stats.need_room == 1 %}
+                1 confirmed student needs a room
+            {% else %}
+                {{ stats.need_room }} confirmed students need a room
+            {% endif %}
         </span>
     </div>
 
@@ -171,7 +172,8 @@
             </div>
 
             <p class="muted">
-                {{ room.capacity - room.occupied }} beds available
+                {% set free_beds = room.capacity - room.occupied %}
+                {{ free_beds }} {{ "bed" if free_beds == 1 else "beds" }} available
             </p>
         </div>
         {% else %}
@@ -200,7 +202,7 @@
                 <label>
                     Number of beds (1–6)
                     <input type="number" name="capacity"
-                           min="1" max="6" required>
+                           min="1" max="6" placeholder="4" required>
                 </label>
 
                 <button type="submit">Create room</button>

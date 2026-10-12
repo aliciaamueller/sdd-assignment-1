@@ -2,7 +2,7 @@
 
 import pytest
 
-from app import app
+from app import app, format_dates
 from room_allocation import create_room
 from trip_management import confirm_payment, create_trip, register_student
 
@@ -79,6 +79,13 @@ def test_full_flow_through_routes(client, test_db):
     assert test_db.execute(
         "SELECT COUNT(*) FROM room_assignments"
     ).fetchone()[0] == 1
+
+
+def test_format_dates():
+    assert format_dates("2027-01-10", "2027-01-15") == "10 – 15 Jan 2027"
+    assert format_dates("2027-02-27", "2027-03-03") == "27 Feb – 3 Mar 2027"
+    assert format_dates("2026-12-30", "2027-01-02") == "30 Dec 2026 – 2 Jan 2027"
+    assert format_dates("2027-01-10", "2027-01-10") == "10 Jan 2027"
 
 
 def test_cannot_assign_room_from_another_trip(client, test_db):

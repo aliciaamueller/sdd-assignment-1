@@ -1,6 +1,8 @@
 
 """Flask web interface for Ski Club Manager."""
 
+from datetime import date
+
 from flask import Flask, flash, redirect, render_template, request, url_for
 
 from config import PORT, SECRET_KEY
@@ -92,6 +94,26 @@ def get_trip_details(trip_id):
         conn.close()
 
 
+def format_dates(start_date, end_date):
+    """Turn two ISO dates into a short range, e.g. 10–15 Jan 2027."""
+    start = date.fromisoformat(start_date)
+    end = date.fromisoformat(end_date)
+
+    end_text = f"{end.day} {end.strftime('%b')} {end.year}"
+
+    # Only repeat the month and year when they change.
+    if start == end:
+        return end_text
+    if start.year != end.year:
+        start_text = f"{start.day} {start.strftime('%b')} {start.year}"
+    elif start.month != end.month:
+        start_text = f"{start.day} {start.strftime('%b')}"
+    else:
+        start_text = f"{start.day}"
+
+    return f"{start_text} – {end_text}"
+
+
 def form_int(field, message):
     """Read a whole number from the submitted form, or fail with a clear message."""
     try:
@@ -116,6 +138,7 @@ def index():
 
     for trip in trips:
         trip["stats"] = get_trip_statistics(trip["id"])
+        trip["dates"] = format_dates(trip["start_date"], trip["end_date"])
 
     return render_template("index.html", trips=trips)
 
@@ -143,6 +166,8 @@ def trip_page(trip_id):
 
     if trip is None:
         return "Trip not found", 404
+
+    trip["dates"] = format_dates(trip["start_date"], trip["end_date"])
 
     stats = get_trip_statistics(trip_id)
     rooms = get_rooms(trip_id)

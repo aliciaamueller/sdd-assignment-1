@@ -113,18 +113,21 @@ h3 {
 .trip-grid,
 .room-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 18px;
 }
 
 .trip-card,
 .panel,
-.stat-card,
 .empty-state {
     background: var(--white);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 24px;
+}
+
+.empty-state {
+    grid-column: 1 / -1;
 }
 
 .trip-card {
@@ -210,25 +213,43 @@ h3 {
     font-size: 12px;
 }
 
-.stats-grid {
+.stats-strip {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(6, 1fr);
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
 }
 
-.stat-card {
+.stat {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
+    padding: 16px 20px;
+    border-left: 1px solid var(--border);
 }
 
-.stat-card span {
+.stat:first-child {
+    border-left: none;
+}
+
+.stat span {
     color: var(--muted);
     font-size: 12px;
 }
 
-.stat-card strong {
-    font-size: 30px;
+.stat strong {
+    font-size: 24px;
+}
+
+.stat.highlight {
+    background: var(--navy);
+    color: white;
+}
+
+.stat.highlight span {
+    color: #b9c6d6;
 }
 
 .form-grid {
@@ -260,6 +281,10 @@ select {
     padding: 12px;
     color: var(--navy);
     font: inherit;
+}
+
+input::placeholder {
+    color: #a7b1bc;
 }
 
 input:focus,
@@ -386,8 +411,14 @@ tr:last-child td {
 }
 
 .back-link {
+    display: inline-block;
+    margin-bottom: 22px;
     color: var(--blue);
     font-weight: 600;
+}
+
+.register-panel {
+    margin-top: 18px;
 }
 
 .preferences-list {
@@ -417,10 +448,68 @@ tr:last-child td {
         font-size: 30px;
     }
 
-    .stats-grid,
     .two-columns,
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .stats-strip {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .stat {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .stat:nth-child(3n + 1) {
+        border-left: none;
+    }
+
+    .stat:nth-child(n + 4) {
+        border-bottom: none;
+    }
+
+    .stat strong {
+        font-size: 20px;
+    }
+
+    /* On phones each table row becomes a small card, so the
+       action buttons are never hidden off the side of the screen. */
+    thead {
+        display: none;
+    }
+
+    table,
+    tbody,
+    tr,
+    td {
+        display: block;
+    }
+
+    tr {
+        padding: 10px 15px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child {
+        border-bottom: none;
+    }
+
+    td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 0;
+        border-bottom: none;
+    }
+
+    td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
     }
 
     .header-label {
