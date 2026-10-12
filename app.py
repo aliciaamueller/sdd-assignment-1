@@ -130,9 +130,9 @@ def form_int(field, message):
 def handle_action(action, success_message):
     """Run a form action and show a helpful message.
 
-    Command-style: each route wraps its work in an action() function and
-    passes it here, so error handling and flash messages live in one place
-    instead of being repeated in every route.
+    Each route wraps its work in an action() function and passes it here,
+    so error handling and flash messages live in one place instead of being
+    repeated in every route.
     """
     try:
         action()

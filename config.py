@@ -1,10 +1,4 @@
-"""App settings, read from environment variables with sensible defaults.
-
-Singleton: Python runs a module only once, on its first import, so these
-settings are read from the environment once at startup and every module
-that imports them shares the same values. A Singleton class would add
-nothing a module does not already give us.
-"""
+"""App settings, read from environment variables with sensible defaults."""
 
 import os
 
