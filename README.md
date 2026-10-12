@@ -133,6 +133,8 @@ PORT=9000 DATA_DIR=./local_data python app.py
 
 Set a separate `SECRET_KEY` for any shared deployment.
 
+**SQLite path:** the database file is always `$DATA_DIR/ski_club.db`. That is `./data/ski_club.db` when running locally with the default, and `/data/ski_club.db` inside the container, where `/data` is the mounted volume.
+
 The application initializes its database using `schema.sql`. It also includes a small upgrade procedure for databases created before the `pending_payment` status existed, preserving existing registration records.
 
 ## 4. Testing and reliability
@@ -159,19 +161,19 @@ Coverage is measured on the three business-logic modules, rather than including 
 
 ### Recorded test results
 
-**55 tests | 98% business-logic coverage**
+**59 tests | 100% business-logic coverage** (run on 2026-10-12)
 
 ```text
 Name                 Stmts   Miss  Cover   Missing
 --------------------------------------------------
-room_allocation.py      96      5    95%   12, 57, 65, 135, 173
+room_allocation.py      96      0   100%
 trip_management.py     112      0   100%
 trip_statistics.py      15      0   100%
 --------------------------------------------------
-TOTAL                  223      5    98%
+TOTAL                  223      0   100%
 ```
 
-These results are taken from the latest recorded test run in the project documentation.
+100% is line coverage, not proof that every combination of rules is tested; the testing priorities are explained in ADR 4.
 
 The tests cover the complete registration and payment lifecycle, FIFO waiting-list promotion, room capacity and assignment rules, roommate preferences, dashboard calculations, database initialization and migration, and Flask routes.
 
@@ -195,7 +197,7 @@ The professor-provided checker can be run with:
 ./container/run.sh .
 ```
 
-The latest recorded output is:
+Output from the run on 2026-10-12, against the final code:
 
 ```text
 === SDD Assignment 1 contract check ===
