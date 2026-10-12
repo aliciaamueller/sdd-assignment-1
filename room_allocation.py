@@ -13,6 +13,19 @@ from db import get_connection
 from trip_management import on_registration_cancelled
 
 
+def _get_registration(conn, registration_id):
+    """Adapter: the only place Room Allocation reads Trip Management data.
+
+    Room Allocation only needs a registration's trip and status. Today they
+    come from the shared registrations table; in Assignment 2 only this
+    function changes, to ask the Trip Management service instead.
+    """
+    return conn.execute(
+        "SELECT trip_id, status FROM registrations WHERE id = ?",
+        (registration_id,)
+    ).fetchone()
+
+
 def create_room(trip_id, name, capacity):
     """Create a room for an existing trip and return its ID."""
     if not isinstance(name, str) or not name.strip():
@@ -63,10 +76,7 @@ def assign_student(room_id, registration_id):
         if room is None:
             raise ValueError("Room not found")
 
-        student = conn.execute(
-            "SELECT trip_id, status FROM registrations WHERE id = ?",
-            (registration_id,)
-        ).fetchone()
+        student = _get_registration(conn, registration_id)
 
         if student is None:
             raise ValueError("Registration not found")
@@ -129,22 +139,16 @@ def add_roommate_preference(registration_id, preferred_registration_id):
     try:
         conn.execute("BEGIN IMMEDIATE")
 
-        students = conn.execute(
-            """
-            SELECT id, trip_id, status
-            FROM registrations
-            WHERE id IN (?, ?)
-            """,
-            (registration_id, preferred_registration_id)
-        ).fetchall()
+        student = _get_registration(conn, registration_id)
+        preferred = _get_registration(conn, preferred_registration_id)
 
-        if len(students) != 2:
+        if student is None or preferred is None:
             raise ValueError("Both registrations must exist")
 
-        if any(student["status"] != "confirmed" for student in students):
+        if student["status"] != "confirmed" or preferred["status"] != "confirmed":
             raise ValueError("Both students must be confirmed")
 
-        if students[0]["trip_id"] != students[1]["trip_id"]:
+        if student["trip_id"] != preferred["trip_id"]:
             raise ValueError("Students must be on the same trip")
 
         cursor = conn.execute(
