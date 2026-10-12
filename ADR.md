@@ -14,7 +14,7 @@ Status: Decided
 Context: The app solves two different problems: Trip Management decides who gets a place, and Room Allocation decides where confirmed students sleep. Assignment 2 will split them into separate services, so the seam has to exist now.
 Decision: Trip Management (`trip_management.py`, `trip_statistics.py`) owns `trips` and `registrations`; Room Allocation (`room_allocation.py`) owns `rooms`, `room_assignments` and `roommate_preferences`. Only trip IDs, registration IDs and a registration's status cross the boundary.
 Alternatives considered: One large module would have been quicker to write at first, but registration and accommodation rules would end up mixed in the same functions, making the Assignment 2 split a rewrite rather than a cut.
-Consequences: Three things still cross the seam and would become API calls or messages after the split: `room_allocation.py` reads `registrations` to check a student is confirmed, the cancellation event (Room Allocation subscribes with `on_registration_cancelled`, an Observer, so Trip Management never touches room tables), and `get_trip_statistics` joins registrations with room assignments for the dashboard.
+Consequences: Three things still cross the seam and would become API calls or messages after the split: `room_allocation.py` reads a registration's trip and status, but only through one adapter function, `_get_registration`, the cancellation event (Room Allocation subscribes with `on_registration_cancelled`, an Observer, so Trip Management never touches room tables), and `get_trip_statistics` joins registrations with room assignments for the dashboard.
 
 ## 3. Keep registration history and use plain IDs across the domain boundary
 Date: 2026-10-11
