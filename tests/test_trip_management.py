@@ -1,5 +1,6 @@
 """Tests for trips, registrations, payments and the waiting list."""
 
+import threading
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -332,3 +333,49 @@ def test_cancelled_student_can_register_again(test_db):
 
     assert second != first
     assert get_status(test_db, second) == "pending_payment"
+
+
+def test_simultaneous_registrations_never_exceed_capacity(test_db):
+    trip_id = create_trip(
+        "Andorra 2027", "Grandvalira", "2027-01-20", "2027-01-24", 2
+    )
+
+    # The barrier makes all ten threads wait here and then start together,
+    # so they really do try to take the last places at the same moment.
+    students = 10
+    start_together = threading.Barrier(students)
+    errors = []
+
+    def register(number):
+        start_together.wait()
+        try:
+            register_student(trip_id, f"Student {number}", f"s{number}@ie.edu")
+        except Exception as error:
+            errors.append(error)
+
+    threads = []
+    for number in range(students):
+        thread = threading.Thread(target=register, args=(number,))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
+
+    statuses = test_db.execute(
+        "SELECT status FROM registrations WHERE trip_id = ?",
+        (trip_id,)
+    ).fetchall()
+    holding_a_place = 0
+    waitlisted = 0
+    for row in statuses:
+        if row["status"] == "pending_payment":
+            holding_a_place += 1
+        if row["status"] == "waitlisted":
+            waitlisted += 1
+
+    # Exactly two places are taken and everyone else is waiting.
+    assert holding_a_place == 2
+    assert waitlisted == 8

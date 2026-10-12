@@ -189,3 +189,17 @@ def get_rooms(trip_id):
         return [dict(row) for row in rows]
     finally:
         conn.close()
+
+
+def check_room_on_trip(trip_id, room_id):
+    """Raise ValueError unless the room belongs to this trip."""
+    conn = get_connection()
+    try:
+        room = conn.execute(
+            "SELECT trip_id FROM rooms WHERE id = ?", (room_id,)
+        ).fetchone()
+
+        if room is None or room["trip_id"] != trip_id:
+            raise ValueError("Room not found on this trip")
+    finally:
+        conn.close()

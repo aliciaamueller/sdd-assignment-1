@@ -3,16 +3,18 @@
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 
-from config import PORT
+from config import PORT, SECRET_KEY
 from db import get_connection, init_db
 from room_allocation import (
     add_roommate_preference,
     assign_student,
+    check_room_on_trip,
     create_room,
     get_rooms,
 )
 from trip_management import (
     cancel_registration,
+    check_registration_on_trip,
     confirm_payment,
     create_trip,
     register_student,
@@ -21,7 +23,7 @@ from trip_statistics import get_trip_statistics
 
 
 app = Flask(__name__)
-app.secret_key = "ski-club-local-demo"
+app.secret_key = SECRET_KEY
 
 # Prepare the database when the application starts.
 init_db()
@@ -90,6 +92,14 @@ def get_trip_details(trip_id):
         conn.close()
 
 
+def form_int(field, message):
+    """Read a whole number from the submitted form, or fail with a clear message."""
+    try:
+        return int(request.form.get(field, ""))
+    except ValueError:
+        raise ValueError(message)
+
+
 def handle_action(action, success_message):
     """Run a form action and show a helpful message."""
     try:
@@ -119,7 +129,7 @@ def create_trip_route():
             request.form.get("destination", ""),
             request.form.get("start_date", ""),
             request.form.get("end_date", ""),
-            int(request.form.get("capacity", "0"))
+            form_int("capacity", "Capacity must be a positive integer")
         )
 
     handle_action(action, "Trip created successfully.")
@@ -177,10 +187,11 @@ def register_route(trip_id):
            methods=["POST"])
 def payment_route(trip_id, registration_id):
     """Confirm a student's payment."""
-    handle_action(
-        lambda: confirm_payment(registration_id),
-        "Payment confirmed."
-    )
+    def action():
+        check_registration_on_trip(trip_id, registration_id)
+        confirm_payment(registration_id)
+
+    handle_action(action, "Payment confirmed.")
     return redirect(url_for("trip_page", trip_id=trip_id))
 
 
@@ -188,10 +199,11 @@ def payment_route(trip_id, registration_id):
            methods=["POST"])
 def cancel_route(trip_id, registration_id):
     """Cancel a registration and free its place and room."""
-    handle_action(
-        lambda: cancel_registration(registration_id),
-        "Registration cancelled."
-    )
+    def action():
+        check_registration_on_trip(trip_id, registration_id)
+        cancel_registration(registration_id)
+
+    handle_action(action, "Registration cancelled.")
     return redirect(url_for("trip_page", trip_id=trip_id))
 
 
@@ -202,7 +214,7 @@ def create_room_route(trip_id):
         create_room(
             trip_id,
             request.form.get("name", ""),
-            int(request.form.get("capacity", "0"))
+            form_int("capacity", "Room capacity must be between 1 and 6")
         )
 
     handle_action(action, "Room created successfully.")
@@ -213,10 +225,11 @@ def create_room_route(trip_id):
 def assign_room_route(trip_id):
     """Assign a confirmed student to a room."""
     def action():
-        assign_student(
-            int(request.form.get("room_id", "0")),
-            int(request.form.get("registration_id", "0"))
-        )
+        room_id = form_int("room_id", "Choose a room")
+        registration_id = form_int("registration_id", "Choose a student")
+        check_room_on_trip(trip_id, room_id)
+        check_registration_on_trip(trip_id, registration_id)
+        assign_student(room_id, registration_id)
 
     handle_action(action, "Student assigned to room.")
     return redirect(url_for("trip_page", trip_id=trip_id))
@@ -226,10 +239,13 @@ def assign_room_route(trip_id):
 def preference_route(trip_id):
     """Record a student's preferred roommate."""
     def action():
-        add_roommate_preference(
-            int(request.form.get("registration_id", "0")),
-            int(request.form.get("preferred_registration_id", "0"))
+        registration_id = form_int("registration_id", "Choose a student")
+        preferred_id = form_int(
+            "preferred_registration_id", "Choose a preferred roommate"
         )
+        check_registration_on_trip(trip_id, registration_id)
+        check_registration_on_trip(trip_id, preferred_id)
+        add_roommate_preference(registration_id, preferred_id)
 
     handle_action(action, "Roommate preference saved.")
     return redirect(url_for("trip_page", trip_id=trip_id))

@@ -49,7 +49,7 @@ def init_db():
             conn.executescript(
                 "BEGIN;"
                 "ALTER TABLE registrations RENAME TO registrations_old;"
-                "DROP INDEX idx_registrations_active_email;"
+                "DROP INDEX IF EXISTS idx_registrations_active_email;"
                 + schema +
                 "INSERT INTO registrations"
                 " (id, trip_id, name, email, status, registered_at)"

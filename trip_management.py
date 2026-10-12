@@ -303,3 +303,21 @@ def cancel_registration(registration_id):
 
     finally:
         conn.close()
+
+
+def check_registration_on_trip(trip_id, registration_id):
+    """Raise ValueError unless the registration belongs to this trip."""
+
+    conn = get_connection()
+
+    try:
+        registration = conn.execute(
+            "SELECT trip_id FROM registrations WHERE id = ?",
+            (registration_id,)
+        ).fetchone()
+
+        if registration is None or registration["trip_id"] != trip_id:
+            raise ValueError("Registration not found on this trip")
+
+    finally:
+        conn.close()
