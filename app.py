@@ -44,7 +44,12 @@ def get_trips():
 
 
 def get_trip_details(trip_id):
-    """Load a trip, its registrations and room assignments."""
+    """Load a trip, its registrations and room assignments.
+
+    This read crosses the domain seam: it joins Trip Management's
+    registrations with Room Allocation's rooms and assignments to build one
+    page. After the Assignment 2 split the page would ask both services.
+    """
     conn = get_connection()
     try:
         trip = conn.execute(
