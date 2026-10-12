@@ -1,0 +1,310 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<a href="{{ url_for('index') }}" class="back-link">
+    ← Back to dashboard
+</a>
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">TRIP MANAGEMENT</p>
+        <h1>{{ trip.name }}</h1>
+        <p class="subtitle">
+            {{ trip.destination }} ·
+            {{ trip.start_date }} — {{ trip.end_date }}
+        </p>
+    </div>
+</section>
+
+<section class="stats-grid">
+    <div class="stat-card">
+        <span>Confirmed</span>
+        <strong>{{ stats.confirmed }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Pending payment</span>
+        <strong>{{ stats.pending_payment }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Waiting list</span>
+        <strong>{{ stats.waitlisted }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Places remaining</span>
+        <strong>{{ stats.places_remaining }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Room assigned</span>
+        <strong>{{ stats.room_assigned }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Need a room</span>
+        <strong>{{ stats.need_room }}</strong>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-heading">
+        <h2>Register a student</h2>
+    </div>
+
+    <div class="panel">
+        <p class="muted">
+            Available places are reserved for 48 hours pending payment.
+            When the trip is full, new students join the FIFO waiting list.
+        </p>
+
+        <form method="POST"
+              action="{{ url_for('register_route', trip_id=trip.id) }}"
+              class="form-grid">
+
+            <label>
+                Student name
+                <input name="name" placeholder="Sofia García" required>
+            </label>
+
+            <label>
+                Email address
+                <input type="email" name="email"
+                       placeholder="sofia@example.com" required>
+            </label>
+
+            <div class="form-action">
+                <button type="submit">Register student →</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-heading">
+        <h2>Registrations</h2>
+        <span class="muted">{{ registrations|length }} records</span>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Room</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in registrations %}
+                <tr>
+                    <td><strong>{{ student.name }}</strong></td>
+                    <td>{{ student.email }}</td>
+                    <td>
+                        <span class="status {{ student.status }}">
+                            {{ student.status.replace('_', ' ') }}
+                        </span>
+                    </td>
+                    <td>{{ student.room_name or "—" }}</td>
+                    <td>
+                        <div class="actions">
+                            {% if student.status == "pending_payment" %}
+                            <form method="POST"
+                                  action="{{ url_for('payment_route',
+                                      trip_id=trip.id,
+                                      registration_id=student.id) }}">
+                                <button class="small-button"
+                                        type="submit">
+                                    Confirm payment
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            {% if student.status != "cancelled" %}
+                            <form method="POST"
+                                  action="{{ url_for('cancel_route',
+                                      trip_id=trip.id,
+                                      registration_id=student.id) }}">
+                                <button class="small-button danger"
+                                        type="submit">
+                                    Cancel
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="muted">
+                        No registrations yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-heading">
+        <h2>Room Allocation</h2>
+        <span class="muted">
+            {{ stats.need_room }} confirmed students need a room
+        </span>
+    </div>
+
+    <div class="room-grid">
+        {% for room in rooms %}
+        <div class="panel room-card">
+            <div class="room-card-header">
+                <h3>{{ room.name }}</h3>
+                <span class="tag">
+                    {{ room.occupied }}/{{ room.capacity }} beds
+                </span>
+            </div>
+
+            <div class="progress-track">
+                <div class="progress-fill"
+                     style="width: {{ room.occupied / room.capacity * 100 }}%">
+                </div>
+            </div>
+
+            <p class="muted">
+                {{ room.capacity - room.occupied }} beds available
+            </p>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No rooms created</h3>
+            <p>Add your first room below.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="two-columns">
+        <div class="panel">
+            <h3>Create a room</h3>
+
+            <form method="POST"
+                  action="{{ url_for('create_room_route',
+                      trip_id=trip.id) }}"
+                  class="stacked-form">
+
+                <label>
+                    Room name
+                    <input name="name"
+                           placeholder="Room 101" required>
+                </label>
+
+                <label>
+                    Number of beds (1–6)
+                    <input type="number" name="capacity"
+                           min="1" max="6" required>
+                </label>
+
+                <button type="submit">Create room</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h3>Assign a student</h3>
+
+            <form method="POST"
+                  action="{{ url_for('assign_room_route',
+                      trip_id=trip.id) }}"
+                  class="stacked-form">
+
+                <label>
+                    Confirmed student without a room
+                    <select name="registration_id" required>
+                        <option value="">Select student</option>
+                        {% for student in unassigned_students %}
+                        <option value="{{ student.id }}">
+                            {{ student.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label>
+                    Room
+                    <select name="room_id" required>
+                        <option value="">Select room</option>
+                        {% for room in rooms %}
+                            {% if room.occupied < room.capacity %}
+                            <option value="{{ room.id }}">
+                                {{ room.name }}
+                                ({{ room.capacity - room.occupied }} free)
+                            </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <button type="submit">Assign room</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-heading">
+        <h2>Roommate preferences</h2>
+    </div>
+
+    <div class="panel">
+        <p class="muted">
+            Students can request a friend on the same trip.
+            Preferences are recorded for manual allocation.
+        </p>
+
+        <form method="POST"
+              action="{{ url_for('preference_route',
+                  trip_id=trip.id) }}"
+              class="form-grid">
+
+            <label>
+                Student
+                <select name="registration_id" required>
+                    <option value="">Select student</option>
+                    {% for student in confirmed_students %}
+                    <option value="{{ student.id }}">
+                        {{ student.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label>
+                Preferred roommate
+                <select name="preferred_registration_id" required>
+                    <option value="">Select roommate</option>
+                    {% for student in confirmed_students %}
+                    <option value="{{ student.id }}">
+                        {{ student.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="form-action">
+                <button type="submit">Save preference</button>
+            </div>
+        </form>
+
+        {% if preferences %}
+        <div class="preferences-list">
+            {% for preference in preferences %}
+            <p>
+                <strong>{{ preference.student_name }}</strong>
+                would like to share with
+                <strong>{{ preference.preferred_name }}</strong>
+            </p>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

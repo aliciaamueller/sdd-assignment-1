@@ -123,7 +123,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 #  mounted volume at runtime, so anything you bake in there is shadowed or
 #  ignored, and the app you tested is not the app that runs (§7.11).
 # -----------------------------------------------------------------------------
-COPY app.py config.py db.py schema.sql trip_management.py trip_statistics.py ./
+COPY app.py config.py db.py schema.sql trip_management.py trip_statistics.py room_allocation.py ./
+COPY templates/ ./templates/
+COPY static/ ./static/
 
 RUN chown -R appuser:appuser /app
 

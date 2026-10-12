@@ -1,0 +1,115 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">OVERVIEW</p>
+        <h1>Trip Dashboard</h1>
+        <p class="subtitle">
+            Manage registrations, payments and rooms in one place.
+        </p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-heading">
+        <h2>Your trips</h2>
+        <span class="muted">{{ trips|length }} trips</span>
+    </div>
+
+    <div class="trip-grid">
+        {% for trip in trips %}
+        <a href="{{ url_for('trip_page', trip_id=trip.id) }}"
+           class="trip-card">
+            <div class="trip-card-top">
+                <span class="tag">SKI TRIP</span>
+                <span class="arrow">↗</span>
+            </div>
+
+            <h3>{{ trip.name }}</h3>
+            <p class="muted">{{ trip.destination }}</p>
+            <p class="trip-dates">
+                {{ trip.start_date }} — {{ trip.end_date }}
+            </p>
+
+            <div class="progress-track">
+                <div class="progress-fill"
+                     style="width: {{ trip.stats.occupancy_percent }}%">
+                </div>
+            </div>
+
+            <div class="trip-card-stats">
+                <div>
+                    <strong>{{ trip.stats.confirmed }}</strong>
+                    <span>Confirmed</span>
+                </div>
+                <div>
+                    <strong>{{ trip.stats.pending_payment }}</strong>
+                    <span>Pending</span>
+                </div>
+                <div>
+                    <strong>{{ trip.stats.waitlisted }}</strong>
+                    <span>Waitlisted</span>
+                </div>
+            </div>
+
+            <p class="availability">
+                {{ trip.stats.places_remaining }} of
+                {{ trip.capacity }} places available
+            </p>
+        </a>
+        {% else %}
+        <div class="empty-state">
+            <h3>No trips yet</h3>
+            <p>Create your first ski trip using the form below.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-heading">
+        <h2>Create a new trip</h2>
+    </div>
+
+    <div class="panel">
+        <form method="POST"
+              action="{{ url_for('create_trip_route') }}"
+              class="form-grid">
+
+            <label>
+                Trip name
+                <input name="name" placeholder="Andorra 2027" required>
+            </label>
+
+            <label>
+                Destination
+                <input name="destination" placeholder="Grandvalira" required>
+            </label>
+
+            <label>
+                Start date
+                <input type="date" name="start_date" required>
+            </label>
+
+            <label>
+                End date
+                <input type="date" name="end_date" required>
+            </label>
+
+            <label>
+                Maximum participants
+                <input type="number" name="capacity"
+                       min="1" placeholder="100" required>
+            </label>
+
+            <div class="form-action">
+                <button type="submit">Create trip →</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% endblock %}
