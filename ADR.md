@@ -30,7 +30,7 @@ Status: Decided
 Context: The assignment requires at least 70% coverage of the core business logic, and I wanted the tests to target the rules whose failure would actually hurt students, not just raise the percentage.
 Decision: Use pytest with a fresh temporary SQLite database per test, and measure coverage only on `trip_management.py`, `trip_statistics.py` and `room_allocation.py`, prioritising capacity, the 48-hour deadline, cancellation, FIFO waitlist promotion, room rules and a ten-thread overbooking test.
 Alternatives considered: Simple one-function-at-a-time tests with fixed inputs would have reached 70% faster, but would miss the bugs that appear when rules interact (expiry triggering promotion, cancellation freeing a room). Measuring coverage over every file including `app.py` was rejected because it mixes framework glue into a number that is meant to describe business logic.
-Consequences: 61 tests pass with 100% line coverage on the core modules. Flask routes are tested more thinly in `test_app.py` (one full workflow, form validation and trip-ownership checks) and kept out of the reported figure, and there are no tests for template rendering or styling.
+Consequences: 62 tests pass with 100% line coverage on the core modules. Flask routes are tested more thinly in `test_app.py` (one full workflow, form validation and trip-ownership checks) and kept out of the reported figure, and there are no tests for template rendering or styling.
 
 ## 5. Leave out authentication and real payment processing
 Date: 2026-10-12

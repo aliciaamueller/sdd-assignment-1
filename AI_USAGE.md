@@ -83,7 +83,7 @@ It also helped me move faster when setting up Flask, Docker and the web interfac
 
 Testing helped identify these inconsistencies and gave me a way to check that changes had not broken existing functionality.
 
-The final implementation has 61 passing tests and 100% line coverage across the three core business-logic modules. The Docker contract checker also passes.
+The final implementation has 62 passing tests and 100% line coverage across the three core business-logic modules. The Docker contract checker also passes.
 
 The most useful thing I learned was how much the different rules depend on one another. Registration capacity affects payments, payments affect waiting lists, and cancellations can also affect room assignments. Keeping those responsibilities separate in the code made the application easier to understand and test.
 

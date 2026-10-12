@@ -36,7 +36,7 @@ Expired reservations are processed whenever a registration, payment or cancellat
 
 Once payment is confirmed, organisers can create rooms with one to six beds, assign students and record roommate preferences.
 
-The application checks that students are confirmed, rooms belong to the correct trip and no room exceeds its capacity. Cancelling a registration also releases the student's room assignment.
+The application checks that students are confirmed, rooms belong to the correct trip and no room exceeds its capacity. Cancelling a registration also releases the student's room assignment and removes any roommate preferences made by or naming that student.
 
 ### Dashboard
 
@@ -161,16 +161,16 @@ Coverage is measured on the three business-logic modules, rather than including 
 
 ### Recorded test results
 
-**61 tests | 100% business-logic coverage** (run on 2026-10-12)
+**62 tests | 100% business-logic coverage** (run on 2026-10-12)
 
 ```text
 Name                 Stmts   Miss  Cover   Missing
 --------------------------------------------------
-room_allocation.py     103      0   100%
+room_allocation.py     104      0   100%
 trip_management.py     117      0   100%
 trip_statistics.py      15      0   100%
 --------------------------------------------------
-TOTAL                  235      0   100%
+TOTAL                  236      0   100%
 ```
 
 100% is line coverage, not proof that every combination of rules is tested; the testing priorities are explained in ADR 4.

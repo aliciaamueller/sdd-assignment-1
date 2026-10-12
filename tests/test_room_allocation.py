@@ -312,3 +312,26 @@ def test_reject_preference_for_unknown_student(test_db):
 def test_get_rooms_for_unknown_trip(test_db):
     with pytest.raises(ValueError, match="Trip not found"):
         get_rooms(999)
+
+
+def test_cancellation_removes_roommate_preferences(test_db):
+    trip_id = make_trip()
+    ana = make_confirmed_student(test_db, trip_id, "Ana", "ana@ie.edu")
+    ben = make_confirmed_student(test_db, trip_id, "Ben", "ben@ie.edu")
+    cara = make_confirmed_student(test_db, trip_id, "Cara", "cara@ie.edu")
+
+    add_roommate_preference(ana, ben)
+    add_roommate_preference(cara, ana)
+    add_roommate_preference(ben, cara)
+
+    cancel_registration(ana)
+
+    # Both requests involving Ana are gone; Ben's request for Cara stays.
+    remaining = test_db.execute(
+        """
+        SELECT registration_id, preferred_registration_id
+        FROM roommate_preferences
+        """
+    ).fetchall()
+
+    assert [tuple(row) for row in remaining] == [(ben, cara)]

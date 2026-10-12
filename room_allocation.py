@@ -216,13 +216,24 @@ def check_room_on_trip(trip_id, room_id):
         conn.close()
 
 
-def _release_room_on_cancel(conn, registration_id):
-    """Observer: free a cancelled student's bed, inside the caller's transaction."""
+def _release_student_on_cancel(conn, registration_id):
+    """Observer: free a cancelled student's bed and drop their roommate
+    preferences, inside the caller's transaction."""
     conn.execute(
         "DELETE FROM room_assignments WHERE registration_id = ?",
         (registration_id,)
     )
 
+    # Remove requests made by the student and requests naming them, so no
+    # one keeps asking to share with someone who is no longer coming.
+    conn.execute(
+        """
+        DELETE FROM roommate_preferences
+        WHERE registration_id = ? OR preferred_registration_id = ?
+        """,
+        (registration_id, registration_id)
+    )
+
 
 # Subscribe once, when this module is first imported.
-on_registration_cancelled(_release_room_on_cancel)
+on_registration_cancelled(_release_student_on_cancel)
