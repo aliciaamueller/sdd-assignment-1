@@ -13,17 +13,30 @@ from db import get_connection
 from trip_management import on_registration_cancelled
 
 
-def _get_registration(conn, registration_id):
-    """Adapter: the only place Room Allocation reads Trip Management data.
+# Adapter: the two functions below are the only code in Room Allocation that
+# reads Trip Management's tables. They turn that data into the simple values
+# this domain needs (does the trip exist, which trip and status does a
+# registration have). Today they query the shared database; in Assignment 2
+# only these two functions change, to ask the Trip Management service.
 
-    Room Allocation only needs a registration's trip and status. Today they
-    come from the shared registrations table; in Assignment 2 only this
-    function changes, to ask the Trip Management service instead.
-    """
-    return conn.execute(
+def _trip_exists(conn, trip_id):
+    """Adapter: True if Trip Management has a trip with this ID."""
+    row = conn.execute(
+        "SELECT id FROM trips WHERE id = ?", (trip_id,)
+    ).fetchone()
+    return row is not None
+
+
+def _get_registration(conn, registration_id):
+    """Adapter: a registration as {"trip_id", "status"}, or None."""
+    row = conn.execute(
         "SELECT trip_id, status FROM registrations WHERE id = ?",
         (registration_id,)
     ).fetchone()
+
+    if row is None:
+        return None
+    return {"trip_id": row["trip_id"], "status": row["status"]}
 
 
 def create_room(trip_id, name, capacity):
@@ -38,11 +51,7 @@ def create_room(trip_id, name, capacity):
     try:
         conn.execute("BEGIN IMMEDIATE")
 
-        trip = conn.execute(
-            "SELECT id FROM trips WHERE id = ?", (trip_id,)
-        ).fetchone()
-
-        if trip is None:
+        if not _trip_exists(conn, trip_id):
             raise ValueError("Trip not found")
 
         cursor = conn.execute(
@@ -176,11 +185,7 @@ def get_rooms(trip_id):
     """Return rooms for a trip with their current occupancy."""
     conn = get_connection()
     try:
-        trip = conn.execute(
-            "SELECT id FROM trips WHERE id = ?", (trip_id,)
-        ).fetchone()
-
-        if trip is None:
+        if not _trip_exists(conn, trip_id):
             raise ValueError("Trip not found")
 
         rows = conn.execute(

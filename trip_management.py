@@ -1,10 +1,11 @@
 """Trip Management domain: trips, registrations, payments and the waitlist.
 
 Facade: the public functions below (create_trip, register_student,
-confirm_payment, cancel_registration, check_registration_on_trip) are the
-only way the rest of the app changes this domain. Callers never see the
-SQL, the transactions or the expiry rules. In Assignment 2 these become the
-endpoints of the Trip Management service.
+confirm_payment, cancel_registration, check_registration_on_trip and
+on_registration_cancelled) are the only way the rest of the app changes
+this domain. Callers never see the SQL, the transactions or the expiry
+rules. In Assignment 2 these become the endpoints of the Trip Management
+service.
 """
 import sqlite3
 from datetime import date, datetime, timedelta, timezone
@@ -16,7 +17,7 @@ PAYMENT_WINDOW = timedelta(hours=48)
 
 # Observer: functions from other domains that want to know when a
 # registration is cancelled. Trip Management calls them without knowing what
-# they do, so it never touches another domain's tables. Room Allocation
+# they do, so it never writes to another domain's tables. Room Allocation
 # subscribes to free the student's bed.
 _cancellation_listeners = []
 
