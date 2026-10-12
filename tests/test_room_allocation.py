@@ -280,3 +280,35 @@ def test_reject_unpaid_roommate_preference(test_db):
 
     with pytest.raises(ValueError, match="confirmed"):
         add_roommate_preference(sofia, emma)
+
+
+def test_reject_empty_room_name(test_db):
+    trip_id = make_trip()
+
+    with pytest.raises(ValueError):
+        create_room(trip_id, "   ", 4)
+
+
+def test_reject_unknown_room_or_registration(test_db):
+    trip_id = make_trip()
+    room_id = create_room(trip_id, "Room 101", 4)
+    student = make_confirmed_student(test_db, trip_id, "Ana", "ana@ie.edu")
+
+    with pytest.raises(ValueError, match="Room not found"):
+        assign_student(999, student)
+
+    with pytest.raises(ValueError, match="Registration not found"):
+        assign_student(room_id, 999)
+
+
+def test_reject_preference_for_unknown_student(test_db):
+    trip_id = make_trip()
+    student = make_confirmed_student(test_db, trip_id, "Ana", "ana@ie.edu")
+
+    with pytest.raises(ValueError, match="Both registrations must exist"):
+        add_roommate_preference(student, 999)
+
+
+def test_get_rooms_for_unknown_trip(test_db):
+    with pytest.raises(ValueError, match="Trip not found"):
+        get_rooms(999)
