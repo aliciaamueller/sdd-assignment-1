@@ -1,4 +1,3 @@
-
 """Shared database setup for tests."""
 
 import pytest

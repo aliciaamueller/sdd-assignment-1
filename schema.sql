@@ -1,6 +1,7 @@
 -- Ski Club Manager schema.
 -- Runs on every startup, so every statement must be safe to repeat:
--- IF NOT EXISTS only creates what is missing. Nothing is ever dropped.
+-- IF NOT EXISTS only creates what is missing. Nothing is ever dropped
+-- (db.init_db upgrades an older registrations table by copying its rows).
 
 -- =====================================================================
 -- Domain 1: Trip Management
@@ -16,12 +17,15 @@ CREATE TABLE IF NOT EXISTS trips (
     capacity    INTEGER NOT NULL CHECK (capacity > 0)
 );
 
-
+-- status: pending_payment = place reserved until payment_deadline,
+--         confirmed = paid, waitlisted = no free place yet,
+--         cancelled = cancelled by the student or the deadline passed.
+-- Rows are never deleted, so cancelled history is kept.
 CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY,
     trip_id INTEGER NOT NULL REFERENCES trips(id),
     name TEXT NOT NULL,
-    email TEXT NOT NULL COLLATE NOCASE,
+    email TEXT NOT NULL COLLATE NOCASE,  -- Python also lowercases; NOCASE covers direct inserts
     status TEXT NOT NULL
         CHECK (status IN (
             'pending_payment',

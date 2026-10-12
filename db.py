@@ -19,6 +19,19 @@ def get_connection():
     return conn
 
 
+def _needs_payment_upgrade(conn):
+    """True if registrations was created before the pending_payment status.
+
+    CREATE TABLE IF NOT EXISTS skips a table that already exists, so an
+    older database would keep the old CHECK and reject every new
+    registration.
+    """
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'registrations'"
+    ).fetchone()
+    return row is not None and "pending_payment" not in row["sql"]
+
+
 def init_db():
     """Create the data folder and any missing tables. Safe to run every boot."""
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -28,6 +41,24 @@ def init_db():
 
     conn = get_connection()
     try:
-        conn.executescript(schema)
+        if _needs_payment_upgrade(conn):
+            # SQLite cannot change a CHECK in place, so move the old table
+            # aside, let schema.sql create the new one, copy every row
+            # across and only then drop the old copy. One transaction, so
+            # a crash halfway leaves the old table untouched.
+            conn.executescript(
+                "BEGIN;"
+                "ALTER TABLE registrations RENAME TO registrations_old;"
+                "DROP INDEX idx_registrations_active_email;"
+                + schema +
+                "INSERT INTO registrations"
+                " (id, trip_id, name, email, status, registered_at)"
+                " SELECT id, trip_id, name, email, status, registered_at"
+                " FROM registrations_old;"
+                "DROP TABLE registrations_old;"
+                "COMMIT;"
+            )
+        else:
+            conn.executescript(schema)
     finally:
         conn.close()
