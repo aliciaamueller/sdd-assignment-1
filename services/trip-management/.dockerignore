@@ -1,0 +1,5 @@
+# Only what the Dockerfile copies explicitly is needed; keep the rest out of
+# the build context so local files can never end up in the image.
+*
+!requirements.txt
+!app.py
