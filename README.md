@@ -117,6 +117,28 @@ docker run -p 8000:8000 -v ski-club-data:/data ski-club
 
 The named Docker volume preserves the SQLite database between container restarts.
 
+### CI and published images
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+1. **test**: `ruff check` and `pytest` for each service in `services/`.
+2. **images**: runs only if `test` passed. It builds the image of each service on every run, but logs in to GHCR and pushes only from `main`.
+
+Images are tagged with the commit SHA that produced them, never `latest`, so the tag says exactly which code is running:
+
+```text
+ghcr.io/aliciaamueller/skitripplanner-trip-management:<commit sha>
+ghcr.io/aliciaamueller/skitripplanner-room-allocation:<commit sha>
+```
+
+To run a published image locally (the packages are private, so log in first):
+
+```bash
+gh auth token | docker login ghcr.io -u <github user> --password-stdin
+docker run --rm -p 8001:8000 ghcr.io/aliciaamueller/skitripplanner-trip-management:<commit sha>
+curl http://localhost:8001/health
+```
+
 ### Configuration
 
 | Variable | Default | Description |
